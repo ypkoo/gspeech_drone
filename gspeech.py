@@ -112,7 +112,7 @@ class GspeechHandler(object):
 
 			if direction not in DIRECTIONS:
 				print "Wrong direction: %s" % direction
-				print "Direction should be one of %s" DIRECTIONS
+				print "Direction should be one of %s" % DIRECTIONS
 				return
 
 			if direction == "forward":
