@@ -28,9 +28,9 @@ ADDR = (HOST, PORT)
 
 RECORD_DURATION = 5
 
-PHRASES = ["action", "offboard", "arm", "disarm", "takeoff", "land", "go home"]
+PHRASES = ["action", "Action", "offboard", "arm", "disarm", "takeoff", "land", "go home", "go", "forward", "backward", "right", "left", "turn", "meters", "degrees"]
 
-INTENTS = ["action", "go", "turn"]
+INTENTS = ["action", "go", "turn", "Action", "Go", "Turn"]
 ACTIONS = ["arm", "disarm", "takeoff", "land", "gohome", "take off", "go home"]
 DIRECTIONS = ["forward", "backward", "right", "left"]
 
@@ -88,10 +88,13 @@ class GspeechHandler(object):
 
 	def build_message(self, voice_text):
 
-		voice_text.lower()
+
+		voice_text = voice_text.lower()
 		voice_texts = voice_text.split()
 
 		intent = voice_texts[0]
+
+		msg = None
 
 		if not intent in INTENTS:
 			print "Wrong intention: %s" % intent
@@ -112,7 +115,6 @@ class GspeechHandler(object):
 			}
 
 
-			self.send_msg(msg)
 
 		elif intent == "go":
 
@@ -125,118 +127,130 @@ class GspeechHandler(object):
 
 			if direction == "forward":
 
-				distance = voice_texts[2]
+				try:
 
-				if is_number(distance):
-
-
-					msg = {
-						"command": "offboard",
-						"content": {
-							"vx": "1",
-							"vy": "0",
-							"vz": "0",
-							"va": "0",
-							"duration": distance,
-						},
-					}
-
-					self.send_msg(msg)
-				else:
+					distance = int(voice_texts[2])
+				except ValueError:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
+
+					return
+
+
+				msg = {
+					"command": "offboard",
+					"content": {
+						"vx": 1,
+						"vy": 0,
+						"vz": 0,
+						"va": 0,
+						"duration": distance,
+					},
+				}
+
+				
 
 			elif direction == "backward":
-				distance = voice_texts[2]
 
-				if is_number(distance):
+				try:
 
-
-					msg = {
-						"command": "offboard",
-						"content": {
-							"vx": "1",
-							"vy": "0",
-							"vz": "0",
-							"va": "0",
-							"duration": distance,
-						},
-					}
-
-					self.send_msg(msg)
-				else:
+					distance = int(voice_texts[2])
+				except ValueError:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
+
+					return
+
+
+				msg = {
+					"command": "offboard",
+					"content": {
+						"vx": -1,
+						"vy": 0,
+						"vz": 0,
+						"va": 0,
+						"duration": distance,
+					},
+				}
+
+				
 
 			elif direction == "right":
-				distance = voice_texts[2]
-
-				if is_number(distance):
-
-
-					msg = {
-						"command": "offboard",
-						"content": {
-							"vx": "1",
-							"vy": "0",
-							"vz": "0",
-							"va": "0",
-							"duration": distance,
-						},
-					}
-
-					self.send_msg(msg)
-				else:
+				try:
+					distance = int(voice_texts[2])
+				except ValueError:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
+
+					return
+
+
+				msg = {
+					"command": "offboard",
+					"content": {
+						"vx": 0,
+						"vy": 1,
+						"vz": 0,
+						"va": 0,
+						"duration": distance,
+					},
+				}
+
+				
 
 			elif direction == "left":
-				distance = voice_texts[2]
+				try:
 
-				if is_number(distance):
-
-
-					msg = {
-						"command": "offboard",
-						"content": {
-							"vx": "1",
-							"vy": "0",
-							"vz": "0",
-							"va": "0",
-							"duration": distance,
-						},
-					}
-
-					self.send_msg(msg)
-				else:
+					distance = int(voice_texts[2])
+				except ValueError:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
 
-			elif intent == "turn":
-				distance = voice_texts[2]
-
-				if is_number(distance):
+					return
 
 
-					msg = {
-						"command": "offboard",
-						"content": {
-							"vx": "0",
-							"vy": "0",
-							"vz": "0",
-							"va": "0",
-							"duration": distance,
-						},
-					}
+				msg = {
+					"command": "offboard",
+					"content": {
+						"vx": 0,
+						"vy": -1,
+						"vz": 0,
+						"va": 0,
+						"duration": distance,
+					},
+				}
 
-					self.send_msg(msg)
-				else:
-					print "Wrong angle: %s" % distance
-					print "angle should be a number"
+				
+
+		elif intent == "turn":
+			angle = voice_texts[1]
+			try:
+				angle = int(angle)
+			except ValueError:
+				print "Wrong angle: %s" % angle
+				print "angle should be a number"
+
+				return
+
+
+			msg = {
+				"command": "offboard",
+				"content": {
+					"vx": 0,
+					"vy": 0,
+					"vz": 0,
+					"va": 10,
+					"duration": angle/10,
+				},
+			}
+
+			
+
+		return msg
 
 	def send_msg(self, msg):
 		self.sock.send(json.dumps(msg))
-		print "Message sent: \n", json.dumps(msg, indent=2)
+		print "Message sent: \n", json.dumps(msg, indent=4)
 
 
 
@@ -250,7 +264,9 @@ if __name__ == '__main__':
 			speech_file = g_handler.record_voice()
 			text = g_handler.transcribe_file(speech_file)
 			msg = g_handler.build_message(text)
-			g_handler.send_msg(msg)
+
+			if msg:
+				g_handler.send_msg(msg)
 		elif opt == 'q':
 			print ("Finish the program!")
 			sleep(2)
