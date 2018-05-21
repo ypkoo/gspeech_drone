@@ -18,7 +18,7 @@ class GspeechHandler(object):
 
 	HOST = "223.171.33.71"
 	PORT = 8080
-	ADDR = (HOST, ADDR)
+	ADDR = (HOST, PORT)
 
 	RECORD_DURATION = 5
 
