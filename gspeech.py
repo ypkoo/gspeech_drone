@@ -1,11 +1,18 @@
-from socket import *
-from select import *
+import socket
 from time import ctime
 import sys
 import io
 import os
 import time
 import json
+
+try:
+	from google.cloud import speech
+except ImportError:
+	print("Error speech import error")
+	exit(255)
+from google.cloud.speech import enums
+from google.cloud.speech import types
 
 def is_number(number):
 	try:
@@ -14,37 +21,37 @@ def is_number(number):
 	except ValueError:
 		return False
 
+HOST = "223.171.33.71"
+# HOST = "0.0.0.0"
+PORT = 8080
+ADDR = (HOST, PORT)
+
+RECORD_DURATION = 5
+
+PHRASES = ["action", "offboard", "arm", "disarm", "takeoff", "land", "go home"]
+
+INTENTS = ["action", "go", "turn"]
+ACTIONS = ["arm", "disarm", "takeoff", "land", "gohome", "take off", "go home"]
+DIRECTIONS = ["forward", "backward", "right", "left"]
+
 class GspeechHandler(object):
 
-	HOST = "223.171.33.71"
-	PORT = 8080
-	ADDR = (HOST, PORT)
-
-	RECORD_DURATION = 5
-
-	PHRASES = ["action", "offboard", "arm", "disarm", "takeoff", "land", "go home"]
-
-	INTENTS = ["action", "go", "turn"]
-	ACTIONS = ["arm", "disarm", "takeoff", "land", "gohome"]
-	DIRECTIONS = ["forward", "backward", "right", "left"]
+	
 
 	def __init__(self):
 
-		self.sock = socket(AF_INET, SOCK_STREAM)
+
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		
 		try:
+			print "connecting to GCS..."
 			self.sock.connect(ADDR)
+			print "Successfully connected to GCS."
 		except socket.error, msg:
 			print "Couldnt connect with the socket-server: %s\n terminating program" % msg
 			sys.exit(1)
 
-		try:
-			from google.cloud import speech
-		except ImportError:
-			print("Error speech import error")
-			exit(255)
-		from google.cloud.speech import enums
-		from google.cloud.speech import types
+		
 
 		self.gclient = speech.SpeechClient()
 
@@ -82,7 +89,7 @@ class GspeechHandler(object):
 	def build_message(self, voice_text):
 
 		voice_text.lower()
-		voice_texts = voice_texts.split()
+		voice_texts = voice_text.split()
 
 		intent = voice_texts[0]
 
@@ -92,7 +99,7 @@ class GspeechHandler(object):
 			return
 
 		if intent == "action":
-			action = " ".join(voice_texts[1:])
+			action = "".join(voice_texts[1:])
 
 			if not action in ACTIONS:
 				print "Wrong action: %s" % action
@@ -101,10 +108,11 @@ class GspeechHandler(object):
 
 			msg = {
 				"command": "action",
-				"content": msg,
+				"content": action,
 			}
 
-			self.send_msg(msg.dumps())
+
+			self.send_msg(msg)
 
 		elif intent == "go":
 
@@ -132,6 +140,8 @@ class GspeechHandler(object):
 							"duration": distance,
 						},
 					}
+
+					self.send_msg(msg)
 				else:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
@@ -152,6 +162,8 @@ class GspeechHandler(object):
 							"duration": distance,
 						},
 					}
+
+					self.send_msg(msg)
 				else:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
@@ -172,6 +184,8 @@ class GspeechHandler(object):
 							"duration": distance,
 						},
 					}
+
+					self.send_msg(msg)
 				else:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
@@ -192,6 +206,8 @@ class GspeechHandler(object):
 							"duration": distance,
 						},
 					}
+
+					self.send_msg(msg)
 				else:
 					print "Wrong distance: %s" % distance
 					print "Distance should be a number"
@@ -212,12 +228,36 @@ class GspeechHandler(object):
 							"duration": distance,
 						},
 					}
+
+					self.send_msg(msg)
 				else:
 					print "Wrong angle: %s" % distance
 					print "angle should be a number"
 
 	def send_msg(self, msg):
-		pass
+		self.sock.send(json.dumps(msg))
+		print "Message sent: \n", json.dumps(msg, indent=2)
 
 
 
+if __name__ == '__main__':
+	g_handler = GspeechHandler()
+
+	while True:
+		opt = raw_input("input the option: ")
+
+		if opt == "v":
+			speech_file = g_handler.record_voice()
+			text = g_handler.transcribe_file(speech_file)
+			msg = g_handler.build_message(text)
+			g_handler.send_msg(msg)
+		elif opt == 'q':
+			print ("Finish the program!")
+			sleep(2)
+			try:
+				g_handler.sock.close()
+				print "program finish!"
+				break
+			except:
+				print ("Socket close failed!")
+				exit()
